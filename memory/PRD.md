@@ -8,30 +8,17 @@ Build a Decentralized, Verifiable AI Asset Management Protocol where AI models g
 - **Frontend**: React + Tailwind + Shadcn UI on port 3000
 - **Database**: MongoDB (motor async driver)
 - **IPFS**: Pinata for decentralized storage
-- **Blockchain**: Sepolia via Alchemy (hybrid - real wallet + simulated backend)
-- **AI Models**: Numpy-based LSTM + GRU (lightweight, real architecture)
+- **Blockchain**: Sepolia via Alchemy (real wallet + contracts written)
+- **AI Models**: Numpy-based LSTM, GRU, Transformer, Ensemble
+- **Data**: CoinGecko + Binance real-time APIs
+- **WebSocket**: Real-time signal streaming
 
-## Core Requirements
-1. AI signal generation (LSTM, GRU, Ensemble)
-2. Multi-factor Gatekeeper (confidence, volatility, drawdown, consistency)
-3. Non-custodial - wallet-based execution
-4. DAO quadratic voting for model governance
-5. IPFS storage for model code
-6. ZK verification (simulated)
-7. Anomaly detection (Z-score) + EVA ethics agent
-8. Strategy backtesting engine
-9. Admin monitoring (read-only)
+## What's Been Implemented
 
-## User Personas
-- **Traders**: Use dashboard to view signals, allocate funds, execute via wallet
-- **Developers**: Upload AI models to IPFS, await DAO approval
-- **DAO Members**: Vote on model approval/rejection using quadratic voting
-- **Admins**: Monitor system health (read-only, no model control)
-
-## What's Been Implemented (Apr 14, 2026)
+### Phase 1 (Apr 14, 2026)
 - Full backend with 20+ API endpoints
 - Market data from CoinGecko + technical indicators (RSI, MACD, EMA, Bollinger)
-- AI signal generation (LSTM, GRU, Ensemble models)
+- AI signal generation (LSTM, GRU, Ensemble)
 - Multi-factor Gatekeeper system
 - IPFS upload via Pinata
 - DAO quadratic voting
@@ -40,32 +27,46 @@ Build a Decentralized, Verifiable AI Asset Management Protocol where AI models g
 - Anomaly detection + EVA ethics agent
 - ZK verification (simulated proofs)
 - 6 frontend pages: Landing, Dashboard, Marketplace, Developer, DAO, Admin
-- Real MetaMask wallet integration with demo fallback
-- Seed data: 3 models (Alpha LSTM, Beta GRU, Gamma Ensemble)
+
+### Phase 2 (Apr 14, 2026)
+- Solidity smart contracts: ModelRegistry, VotingContract, VerificationStorage (source code ready)
+- Transformer model architecture (multi-head self-attention)
+- WebSocket signal streaming (15-second intervals)
+- Real Binance API integration (ticker, klines, depth, trades)
+- Referral system with unique codes + reward tracking
+- Staking system with 12% APY + governance token rewards
+- Governance token system with 5 tiers (Bronze→Diamond)
+- Voting power multipliers based on tier
+- Smart contract tracking UI
+- 7 pages total (added Staking/Referrals page)
+- 25+ backend API endpoints, all tested 100%
+
+## Seed Models
+1. Alpha LSTM (lstm-001) - active
+2. Beta GRU (gru-001) - active
+3. Gamma Ensemble (ens-001) - pending_votes
+4. Delta Transformer (tf-001) - active
 
 ## Prioritized Backlog
-### P0 (Critical)
-- [x] Core signal generation pipeline
-- [x] Gatekeeper multi-factor filtering
+### P0 (Done)
+- [x] Core signal generation pipeline (4 model types)
+- [x] Multi-factor gatekeeper
 - [x] Dashboard with model selector
 - [x] Wallet connection (MetaMask + demo)
 - [x] Fund allocation via wallet
+- [x] Transformer model
+- [x] WebSocket streaming
+- [x] Binance integration
+- [x] Referral/Staking
 
-### P1 (High)
-- [ ] Real Sepolia smart contract deployment (ModelRegistry, VotingContract, VerificationStorage)
-- [ ] Transformer model architecture
-- [ ] Real-time WebSocket signal updates
-- [ ] User authentication system
-
-### P2 (Medium)
-- [ ] Advanced backtest metrics (Monte Carlo simulation)
-- [ ] Model performance tracking over time
+### P1 (Next)
+- [ ] Actually deploy contracts to Sepolia (needs funded wallet)
+- [ ] Real-time WebSocket market data from Binance
+- [ ] User authentication/profiles
 - [ ] Portfolio analytics dashboard
-- [ ] Mobile-responsive refinements
 
-## Next Tasks
-1. Deploy Solidity contracts to Sepolia
-2. Add Transformer model to AI system
-3. Implement WebSocket for real-time signal feed
-4. Add user authentication/profiles
-5. Integrate real Binance data feeds
+### P2 (Later)
+- [ ] Monte Carlo backtesting
+- [ ] Model performance tracking over time
+- [ ] Mobile-responsive refinements
+- [ ] Advanced DAO proposals (parameter changes)
