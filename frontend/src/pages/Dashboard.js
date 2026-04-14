@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchModels, fetchIndicators, generateSignal, fetchAllocations, createAllocation, createExecution, fetchSignals, runBacktest, fetchUserHistory } from '../lib/api';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { fetchModels, fetchIndicators, generateSignal, fetchAllocations, createAllocation, createExecution, fetchSignals, runBacktest, fetchUserHistory, fetchBinanceTicker, fetchBinanceKlines, getWebSocketUrl } from '../lib/api';
 import { signTransaction, getWalletAddress } from '../lib/wallet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Badge } from '../components/ui/badge';
-import { ChartLine, Lightning, ShieldCheck, Wallet, Clock, TrendUp, TrendDown, Minus, Warning, CheckCircle, XCircle, ArrowRight } from '@phosphor-icons/react';
+import { ChartLine, Lightning, ShieldCheck, Wallet, Clock, TrendUp, TrendDown, Minus, Warning, CheckCircle, XCircle, ArrowRight, Broadcast, CurrencyEth } from '@phosphor-icons/react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell } from 'recharts';
 import { toast } from 'sonner';
 
@@ -38,6 +38,11 @@ export default function Dashboard({ wallet }) {
   const [allocAmount, setAllocAmount] = useState('');
   const [btDays, setBtDays] = useState(30);
   const [symbol] = useState('bitcoin');
+  const [binanceTicker, setBinanceTicker] = useState(null);
+  const [binanceKlines, setBinanceKlines] = useState([]);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [liveSignals, setLiveSignals] = useState([]);
+  const wsRef = useRef(null);
 
   const walletAddr = wallet?.address || getWalletAddress();
 
@@ -50,7 +55,42 @@ export default function Dashboard({ wallet }) {
 
   useEffect(() => {
     fetchIndicators(symbol).then(r => setIndicators(r.data.indicators)).catch(() => {});
+    // Fetch Binance data
+    fetchBinanceTicker(symbol).then(r => setBinanceTicker(r.data.ticker)).catch(() => {});
+    fetchBinanceKlines(symbol, '1h', 48).then(r => setBinanceKlines(r.data.klines || [])).catch(() => {});
   }, [symbol]);
+
+  // WebSocket connection for live signals
+  useEffect(() => {
+    let ws;
+    try {
+      const wsUrl = getWebSocketUrl();
+      ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setWsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'signal') {
+            setLiveSignals(prev => [data, ...prev].slice(0, 30));
+          }
+        } catch (e) { /* ignore parse errors */ }
+      };
+
+      ws.onclose = () => setWsConnected(false);
+      ws.onerror = () => setWsConnected(false);
+    } catch (e) {
+      // WebSocket not available
+    }
+
+    return () => {
+      if (ws) ws.close();
+    };
+  }, []);
 
   useEffect(() => {
     if (walletAddr) {
@@ -159,6 +199,32 @@ export default function Dashboard({ wallet }) {
             </button>
           </div>
         </div>
+
+        {/* Binance Live Ticker + WS Status */}
+        {binanceTicker && (
+          <div className="flex flex-wrap items-center gap-4 bg-[#0F0F0F] border border-white/10 px-4 py-2" data-testid="binance-ticker-bar">
+            <div className="flex items-center gap-1.5">
+              <CurrencyEth size={14} className="text-[#00D4FF]" />
+              <span className="text-[10px] font-mono text-neutral-500">BINANCE</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-mono text-white">${binanceTicker.price?.toLocaleString()}</span>
+              <span className={`text-xs font-mono ${binanceTicker.price_change_pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {binanceTicker.price_change_pct >= 0 ? '+' : ''}{binanceTicker.price_change_pct?.toFixed(2)}%
+              </span>
+            </div>
+            <div className="text-[10px] font-mono text-neutral-500">H: ${binanceTicker.high_24h?.toLocaleString()}</div>
+            <div className="text-[10px] font-mono text-neutral-500">L: ${binanceTicker.low_24h?.toLocaleString()}</div>
+            <div className="text-[10px] font-mono text-neutral-500">Vol: {binanceTicker.volume?.toLocaleString()}</div>
+            <div className="ml-auto flex items-center gap-1.5">
+              <div className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-400 animate-pulse-glow' : 'bg-red-400'}`} />
+              <span className="text-[10px] font-mono text-neutral-500">
+                {wsConnected ? 'WS LIVE' : 'WS OFF'}
+              </span>
+              <Broadcast size={12} className={wsConnected ? 'text-emerald-400' : 'text-neutral-500'} />
+            </div>
+          </div>
+        )}
 
         {/* Top Grid: Signal + Gatekeeper + Indicators */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -347,6 +413,10 @@ export default function Dashboard({ wallet }) {
           <TabsList className="bg-[#0F0F0F] border border-white/10 p-1 h-auto" data-testid="dashboard-tabs">
             <TabsTrigger value="allocation" className="text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white text-neutral-400">Fund Allocation</TabsTrigger>
             <TabsTrigger value="signals" className="text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white text-neutral-400">Signal Feed</TabsTrigger>
+            <TabsTrigger value="live" className="text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white text-neutral-400">
+              Live Stream {wsConnected && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse-glow" />}
+            </TabsTrigger>
+            <TabsTrigger value="binance" className="text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white text-neutral-400">Binance Data</TabsTrigger>
             <TabsTrigger value="backtest" className="text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white text-neutral-400">Backtester</TabsTrigger>
             <TabsTrigger value="history" className="text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white text-neutral-400">History</TabsTrigger>
           </TabsList>
@@ -458,6 +528,127 @@ export default function Dashboard({ wallet }) {
                   </tbody>
                 </table>
                 {!signals.length && <div className="text-center py-8 text-neutral-500 text-sm">No signals yet. Generate one above.</div>}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Live Stream */}
+          <TabsContent value="live">
+            <div className="bg-[#0F0F0F] border border-white/10 p-4" data-testid="live-stream-panel">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono tracking-[0.2em] text-neutral-500 uppercase">WebSocket Live Stream</span>
+                  <div className={`flex items-center gap-1 px-2 py-0.5 ${wsConnected ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'} text-[10px] font-mono`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-emerald-400 animate-pulse-glow' : 'bg-red-400'}`} />
+                    {wsConnected ? 'CONNECTED' : 'DISCONNECTED'}
+                  </div>
+                </div>
+                <span className="text-xs text-neutral-500">{liveSignals.length} live signals</span>
+              </div>
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                {liveSignals.length ? liveSignals.map((s, i) => {
+                  const p = s.prediction || {};
+                  const g = s.gatekeeper || {};
+                  return (
+                    <div key={i} className="flex items-center justify-between py-2 px-3 border border-white/5 bg-[#050505] text-xs animate-fade-in-up">
+                      <div className="flex items-center gap-3">
+                        <Broadcast size={12} className="text-[#00D4FF]" />
+                        <span className="text-neutral-300 font-mono">{s.model_name || s.model_id}</span>
+                        <SignalBadge signal={p.signal} />
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="font-mono text-white">{(p.confidence * 100).toFixed(1)}%</span>
+                        <DecisionBadge decision={g.decision} />
+                        <span className="font-mono text-neutral-500">{s.timestamp ? new Date(s.timestamp).toLocaleTimeString() : ''}</span>
+                      </div>
+                    </div>
+                  );
+                }) : (
+                  <div className="text-center py-12 text-neutral-500 text-sm">
+                    {wsConnected ? 'Waiting for live signals (every ~15s)...' : 'WebSocket not connected. Signals stream automatically when connected.'}
+                  </div>
+                )}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Binance Data */}
+          <TabsContent value="binance">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4" data-testid="binance-panel">
+              <div className="md:col-span-8 bg-[#0F0F0F] border border-white/10 p-4">
+                <span className="text-[10px] font-mono tracking-[0.2em] text-neutral-500 uppercase">Binance Price Chart (1H)</span>
+                {binanceKlines.length > 0 ? (
+                  <div className="h-[250px] mt-3">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={binanceKlines.map((k, i) => ({
+                        idx: i,
+                        close: k.close,
+                        high: k.high,
+                        low: k.low,
+                        volume: k.volume,
+                        time: new Date(k.open_time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})
+                      }))}>
+                        <defs>
+                          <linearGradient id="binGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#00D4FF" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#00D4FF" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#666' }} interval="preserveStartEnd" />
+                        <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: '#666' }} width={70} tickFormatter={v => `$${(v/1000).toFixed(1)}k`} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0F0F0F', border: '1px solid rgba(255,255,255,0.1)', fontSize: 11, fontFamily: 'IBM Plex Mono' }} formatter={(v) => [`$${v.toLocaleString()}`, 'Price']} />
+                        <Area type="monotone" dataKey="close" stroke="#00D4FF" fill="url(#binGrad)" strokeWidth={1.5} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-neutral-500 text-sm">Loading Binance data...</div>
+                )}
+              </div>
+              <div className="md:col-span-4 bg-[#0F0F0F] border border-white/10 p-4">
+                <span className="text-[10px] font-mono tracking-[0.2em] text-neutral-500 uppercase">Binance 24H Stats</span>
+                {binanceTicker && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <span className="text-[10px] text-neutral-500">Last Price</span>
+                      <div className="font-mono text-xl text-white">${binanceTicker.price?.toLocaleString()}</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-[10px] text-neutral-500">24h Change</span>
+                        <div className={`font-mono text-sm ${binanceTicker.price_change_pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {binanceTicker.price_change_pct >= 0 ? '+' : ''}{binanceTicker.price_change_pct?.toFixed(2)}%
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-500">Volume</span>
+                        <div className="font-mono text-sm text-neutral-300">{binanceTicker.volume?.toLocaleString()}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-[10px] text-neutral-500">24h High</span>
+                        <div className="font-mono text-sm text-emerald-400">${binanceTicker.high_24h?.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-neutral-500">24h Low</span>
+                        <div className="font-mono text-sm text-red-400">${binanceTicker.low_24h?.toLocaleString()}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-neutral-500">Open</span>
+                      <div className="font-mono text-sm text-neutral-300">${binanceTicker.open_price?.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-neutral-500">VWAP</span>
+                      <div className="font-mono text-sm text-neutral-300">${binanceTicker.weighted_avg_price?.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-neutral-500">Trades (24h)</span>
+                      <div className="font-mono text-sm text-neutral-300">{binanceTicker.trades?.toLocaleString()}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

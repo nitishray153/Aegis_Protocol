@@ -64,4 +64,34 @@ export const fetchUserHistory = (wallet) => API.get(`/history/${wallet}`);
 export const fetchAdminStats = () => API.get('/admin/stats');
 export const fetchGatekeeperStats = () => API.get('/admin/gatekeeper-stats');
 
+// Binance
+export const fetchBinanceTicker = (symbol = 'bitcoin') => API.get(`/binance/ticker/${symbol}`);
+export const fetchBinanceKlines = (symbol = 'bitcoin', interval = '1h', limit = 100) => API.get(`/binance/klines/${symbol}?interval=${interval}&limit=${limit}`);
+export const fetchBinanceDepth = (symbol = 'bitcoin') => API.get(`/binance/depth/${symbol}`);
+export const fetchBinanceTrades = (symbol = 'bitcoin') => API.get(`/binance/trades/${symbol}`);
+
+// Referral
+export const registerReferral = (data) => API.post('/referral/register', data);
+export const fetchReferral = (wallet) => API.get(`/referral/${wallet}`);
+
+// Staking
+export const createStake = (data) => API.post('/staking/stake', data);
+export const unstake = (data) => API.post('/staking/unstake', data);
+export const fetchStakes = (wallet) => API.get(`/staking/${wallet}`);
+
+// Governance Tokens
+export const fetchTokenBalance = (wallet) => API.get(`/tokens/${wallet}`);
+export const fetchTokenHistory = (wallet) => API.get(`/tokens/${wallet}/history`);
+
+// Contracts
+export const trackContractDeployment = (data) => API.post('/contracts/deployed', data);
+export const fetchDeployedContracts = () => API.get('/contracts');
+
+// WebSocket
+export const getWebSocketUrl = () => {
+  const base = process.env.REACT_APP_BACKEND_URL;
+  const wsBase = base.replace('https://', 'wss://').replace('http://', 'ws://');
+  return `${wsBase}/api/ws/signals`;
+};
+
 export default API;

@@ -30,7 +30,7 @@ def detect_anomaly(signal_data, historical_signals=None):
     # Composite z-score
     z_score = max(z_conf, z_ret)
     
-    is_anomaly = z_score > 2.5
+    is_anomaly = bool(z_score > 2.5)
     severity = "CRITICAL" if z_score > 3.5 else "WARNING" if z_score > 2.5 else "NORMAL"
     
     return {
@@ -39,7 +39,7 @@ def detect_anomaly(signal_data, historical_signals=None):
         "severity": severity,
         "z_confidence": round(float(z_conf), 4),
         "z_return": round(float(z_ret), 4),
-        "details": f"Z-score: {z_score:.2f} ({'ANOMALY DETECTED' if is_anomaly else 'Normal'})",
+        "details": f"Z-score: {float(z_score):.2f} ({'ANOMALY DETECTED' if is_anomaly else 'Normal'})",
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
@@ -101,7 +101,7 @@ def eva_evaluate(signal_data, anomaly_result, market_data=None):
     risk_score += len(rules_failed) * 15  # Failed rules
     risk_score = min(round(risk_score, 2), 100)
     
-    approved = len(rules_failed) == 0 and risk_score < 60
+    approved = bool(len(rules_failed) == 0 and risk_score < 60)
     
     return {
         "approved": approved,

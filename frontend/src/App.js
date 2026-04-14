@@ -8,6 +8,7 @@ import Marketplace from './pages/Marketplace';
 import DeveloperPanel from './pages/DeveloperPanel';
 import DAOPanel from './pages/DAOPanel';
 import AdminPanel from './pages/AdminPanel';
+import StakingReferral from './pages/StakingReferral';
 import './App.css';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/developer" element={<DeveloperPanel wallet={wallet} />} />
           <Route path="/dao" element={<DAOPanel wallet={wallet} />} />
+          <Route path="/staking" element={<StakingReferral wallet={wallet} />} />
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </BrowserRouter>

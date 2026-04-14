@@ -97,7 +97,7 @@ export default function DeveloperPanel({ wallet }) {
             <div>
               <label className="text-xs text-neutral-500 uppercase tracking-wider">Model Type</label>
               <div className="flex gap-2 mt-1">
-                {['LSTM', 'GRU', 'Ensemble'].map(t => (
+                {['LSTM', 'GRU', 'Transformer', 'Ensemble'].map(t => (
                   <button
                     key={t}
                     onClick={() => setForm(f => ({ ...f, model_type: t }))}

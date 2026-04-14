@@ -95,9 +95,97 @@ class GRUModel:
         return _format_prediction(raw, "GRU")
 
 
+class TransformerModel:
+    """Lightweight Transformer-like signal generator using numpy multi-head attention"""
+
+    def __init__(self, input_size=5, d_model=32, num_heads=4):
+        np.random.seed(int(time.time()) % 1000 + 99)
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+
+        # Input projection
+        self.W_in = np.random.randn(d_model, input_size) * 0.1
+        self.b_in = np.zeros(d_model)
+
+        # Multi-head attention weights (Q, K, V per head)
+        self.Wq = [np.random.randn(self.head_dim, d_model) * 0.1 for _ in range(num_heads)]
+        self.Wk = [np.random.randn(self.head_dim, d_model) * 0.1 for _ in range(num_heads)]
+        self.Wv = [np.random.randn(self.head_dim, d_model) * 0.1 for _ in range(num_heads)]
+        self.Wo = np.random.randn(d_model, d_model) * 0.1
+
+        # Feed-forward
+        self.W1 = np.random.randn(d_model * 2, d_model) * 0.1
+        self.b1 = np.zeros(d_model * 2)
+        self.W2 = np.random.randn(d_model, d_model * 2) * 0.1
+        self.b2 = np.zeros(d_model)
+
+        # Output
+        self.Wy = np.random.randn(3, d_model) * 0.1
+        self.by = np.zeros(3)
+
+    def _softmax(self, x):
+        e = np.exp(x - np.max(x, axis=-1, keepdims=True))
+        return e / (e.sum(axis=-1, keepdims=True) + 1e-8)
+
+    def _layer_norm(self, x):
+        mean = np.mean(x, axis=-1, keepdims=True)
+        std = np.std(x, axis=-1, keepdims=True) + 1e-8
+        return (x - mean) / std
+
+    def _attention(self, Q, K, V):
+        scale = np.sqrt(self.head_dim)
+        scores = (Q @ K.T) / scale
+        weights = self._softmax(scores)
+        return weights @ V
+
+    def forward(self, features):
+        """Transformer forward pass with multi-head self-attention"""
+        seq = np.array(features)  # (seq_len, input_size)
+        # Project to d_model
+        X = seq @ self.W_in.T + self.b_in  # (seq_len, d_model)
+
+        # Multi-head attention
+        heads = []
+        for h in range(self.num_heads):
+            Q = X @ self.Wq[h].T
+            K = X @ self.Wk[h].T
+            V = X @ self.Wv[h].T
+            head_out = self._attention(Q, K, V)
+            heads.append(head_out)
+
+        # Concatenate heads and project
+        concat = np.concatenate(heads, axis=-1)  # (seq_len, d_model)
+        attn_out = concat @ self.Wo.T
+
+        # Residual + LayerNorm
+        X = self._layer_norm(X + attn_out)
+
+        # Feed-forward
+        ff = np.maximum(0, X @ self.W1.T + self.b1)  # ReLU
+        ff = ff @ self.W2.T + self.b2
+
+        # Residual + LayerNorm
+        X = self._layer_norm(X + ff)
+
+        # Pool (mean over sequence)
+        pooled = np.mean(X, axis=0)
+
+        # Output layer
+        output = self.Wy @ pooled + self.by
+        return output
+
+    def predict(self, indicators):
+        """Generate trading signal from indicators"""
+        features = _prepare_features(indicators)
+        raw = self.forward(features)
+        return _format_prediction(raw, "Transformer")
+
+
 # Singleton instances
 _lstm = LSTMModel()
 _gru = GRUModel()
+_transformer = TransformerModel()
 
 
 def _prepare_features(indicators):
@@ -165,13 +253,16 @@ def get_model_prediction(model_type, indicators):
         return _lstm.predict(indicators)
     elif model_type == "GRU":
         return _gru.predict(indicators)
+    elif model_type == "Transformer":
+        return _transformer.predict(indicators)
     elif model_type == "Ensemble":
         lstm_pred = _lstm.predict(indicators)
         gru_pred = _gru.predict(indicators)
-        # Weighted ensemble
-        avg_conf = (lstm_pred["confidence"] * 0.6 + gru_pred["confidence"] * 0.4)
-        avg_return = (lstm_pred["expected_return"] * 0.6 + gru_pred["expected_return"] * 0.4)
-        avg_score = (lstm_pred["raw_score"] * 0.6 + gru_pred["raw_score"] * 0.4)
+        tf_pred = _transformer.predict(indicators)
+        # Weighted ensemble: LSTM 40%, GRU 30%, Transformer 30%
+        avg_conf = (lstm_pred["confidence"] * 0.4 + gru_pred["confidence"] * 0.3 + tf_pred["confidence"] * 0.3)
+        avg_return = (lstm_pred["expected_return"] * 0.4 + gru_pred["expected_return"] * 0.3 + tf_pred["expected_return"] * 0.3)
+        avg_score = (lstm_pred["raw_score"] * 0.4 + gru_pred["raw_score"] * 0.3 + tf_pred["raw_score"] * 0.3)
         signal = "BUY" if avg_score > 0.1 else "SELL" if avg_score < -0.1 else "HOLD"
         return {
             "model_name": "Ensemble",

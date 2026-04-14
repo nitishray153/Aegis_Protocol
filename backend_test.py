@@ -71,7 +71,7 @@ class AegisProtocolTester:
         )
 
     def test_models_endpoint(self):
-        """Test models endpoint and verify 3 seeded models"""
+        """Test models endpoint and verify 4 seeded models including tf-001"""
         success, response = self.run_test(
             "Get Models",
             "GET",
@@ -79,10 +79,11 @@ class AegisProtocolTester:
             200,
             check_response=lambda r: (
                 'models' in r and 
-                len(r['models']) >= 3 and
+                len(r['models']) >= 4 and
                 any(m.get('id') == 'lstm-001' for m in r['models']) and
                 any(m.get('id') == 'gru-001' for m in r['models']) and
-                any(m.get('id') == 'ens-001' for m in r['models'])
+                any(m.get('id') == 'ens-001' for m in r['models']) and
+                any(m.get('id') == 'tf-001' for m in r['models'])
             )
         )
         return success, response
@@ -265,6 +266,153 @@ class AegisProtocolTester:
             check_response=lambda r: 'proposals' in r
         )
 
+    # ===== PHASE 2 FEATURES =====
+
+    def test_binance_ticker(self, symbol="bitcoin"):
+        """Test Binance ticker endpoint"""
+        return self.run_test(
+            f"Binance Ticker ({symbol})",
+            "GET",
+            f"/binance/ticker/{symbol}",
+            200,
+            check_response=lambda r: (
+                'ticker' in r and
+                'price' in r['ticker'] and
+                'price_change_pct' in r['ticker'] and
+                'volume' in r['ticker']
+            )
+        )
+
+    def test_binance_klines(self, symbol="bitcoin", interval="1h", limit=10):
+        """Test Binance klines endpoint"""
+        return self.run_test(
+            f"Binance Klines ({symbol}, {interval})",
+            "GET",
+            f"/binance/klines/{symbol}?interval={interval}&limit={limit}",
+            200,
+            check_response=lambda r: (
+                'klines' in r and
+                isinstance(r['klines'], list) and
+                len(r['klines']) > 0 and
+                'open' in r['klines'][0] and
+                'close' in r['klines'][0]
+            )
+        )
+
+    def test_binance_depth(self, symbol="bitcoin"):
+        """Test Binance order book depth endpoint"""
+        return self.run_test(
+            f"Binance Depth ({symbol})",
+            "GET",
+            f"/binance/depth/{symbol}",
+            200,
+            check_response=lambda r: (
+                'depth' in r and
+                'bids' in r['depth'] and
+                'asks' in r['depth']
+            )
+        )
+
+    def test_binance_trades(self, symbol="bitcoin"):
+        """Test Binance recent trades endpoint"""
+        return self.run_test(
+            f"Binance Trades ({symbol})",
+            "GET",
+            f"/binance/trades/{symbol}",
+            200,
+            check_response=lambda r: (
+                'trades' in r and
+                isinstance(r['trades'], list)
+            )
+        )
+
+    def test_referral_register(self):
+        """Test referral registration"""
+        referral_data = {
+            "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
+            "referral_code": ""
+        }
+        return self.run_test(
+            "Referral Registration",
+            "POST",
+            "/referral/register",
+            200,
+            data=referral_data,
+            check_response=lambda r: (
+                'wallet_address' in r and
+                'referral_code' in r and
+                'tier' in r
+            )
+        )
+
+    def test_staking_stake(self):
+        """Test staking creation"""
+        stake_data = {
+            "wallet_address": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18",
+            "amount": 0.1,
+            "tx_hash": "0x123456789abcdef"
+        }
+        return self.run_test(
+            "Create Stake",
+            "POST",
+            "/staking/stake",
+            200,
+            data=stake_data,
+            check_response=lambda r: (
+                'wallet_address' in r and
+                'amount' in r and
+                'status' in r and
+                'apy' in r
+            )
+        )
+
+    def test_token_balance(self, wallet="0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"):
+        """Test token balance endpoint"""
+        return self.run_test(
+            f"Token Balance ({wallet[:10]}...)",
+            "GET",
+            f"/tokens/{wallet}",
+            200,
+            check_response=lambda r: (
+                'wallet_address' in r and
+                'balance' in r and
+                'tier' in r and
+                'voting_power' in r
+            )
+        )
+
+    def test_contract_deployment(self):
+        """Test contract deployment tracking"""
+        contract_data = {
+            "contract_name": "ModelRegistry",
+            "address": "0x1234567890AbcdEf1234567890aBcDeF12345678",
+            "tx_hash": "0x123456789abcdef",
+            "deployer": "0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+        }
+        return self.run_test(
+            "Track Contract Deployment",
+            "POST",
+            "/contracts/deployed",
+            200,
+            data=contract_data,
+            check_response=lambda r: (
+                'contract_name' in r and
+                'address' in r and
+                'network' in r and
+                'chain_id' in r
+            )
+        )
+
+    def test_deployed_contracts(self):
+        """Test deployed contracts list"""
+        return self.run_test(
+            "Get Deployed Contracts",
+            "GET",
+            "/contracts",
+            200,
+            check_response=lambda r: 'contracts' in r
+        )
+
 def main():
     print("🚀 Starting Aegis Protocol API Tests")
     print("=" * 50)
@@ -288,13 +436,13 @@ def main():
     # Test signal generation for each model
     print("\n⚡ SIGNAL GENERATION")
     if models_success and models_response.get('models'):
-        for model in models_response['models'][:3]:  # Test first 3 models
+        for model in models_response['models'][:4]:  # Test all 4 models including tf-001
             model_id = model.get('id')
             if model_id:
                 tester.test_signal_generation(model_id)
     else:
-        # Fallback to known model IDs
-        for model_id in ['lstm-001', 'gru-001']:
+        # Fallback to known model IDs including tf-001
+        for model_id in ['lstm-001', 'gru-001', 'ens-001', 'tf-001']:
             tester.test_signal_generation(model_id)
     
     # Test backtesting
@@ -315,6 +463,32 @@ def main():
     print("\n👨‍💼 ADMIN MONITORING")
     tester.test_admin_stats()
     tester.test_gatekeeper_stats()
+    
+    # ===== PHASE 2 FEATURES =====
+    
+    # Test Binance API integration
+    print("\n🏦 BINANCE API INTEGRATION")
+    tester.test_binance_ticker("bitcoin")
+    tester.test_binance_klines("bitcoin", "1h", 10)
+    tester.test_binance_depth("bitcoin")
+    tester.test_binance_trades("bitcoin")
+    
+    # Test Referral system
+    print("\n👥 REFERRAL SYSTEM")
+    tester.test_referral_register()
+    
+    # Test Staking system
+    print("\n🔒 STAKING SYSTEM")
+    tester.test_staking_stake()
+    
+    # Test Token system
+    print("\n🪙 TOKEN SYSTEM")
+    tester.test_token_balance()
+    
+    # Test Contract tracking
+    print("\n📜 SMART CONTRACT TRACKING")
+    tester.test_contract_deployment()
+    tester.test_deployed_contracts()
     
     # Print results
     print("\n" + "=" * 50)

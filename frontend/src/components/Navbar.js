@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { connectWallet, disconnectWallet, shortenAddress, getBalance } from '../lib/wallet';
-import { ShieldCheck, ChartLine, Storefront, Code, Scales, GearSix, Wallet, SignOut, List, X } from '@phosphor-icons/react';
+import { ShieldCheck, ChartLine, Storefront, Code, Scales, GearSix, Wallet, SignOut, List, X, Coins } from '@phosphor-icons/react';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: ShieldCheck },
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { path: '/marketplace', label: 'Marketplace', icon: Storefront },
   { path: '/developer', label: 'Developer', icon: Code },
   { path: '/dao', label: 'DAO', icon: Scales },
+  { path: '/staking', label: 'Staking', icon: Coins },
   { path: '/admin', label: 'Monitor', icon: GearSix },
 ];
 
