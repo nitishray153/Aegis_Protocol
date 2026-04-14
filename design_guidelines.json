@@ -1,0 +1,85 @@
+{
+  "project_name": "AEGIS PROTOCOL",
+  "theme": "dark",
+  "archetype": "Archetype 4 (Swiss & High-Contrast)",
+  "design_philosophy": "Corporate Web3 meets Swiss Brutalism. Elite, dense, verifiable. No soft edges. Information is architecture. Colors are functional, not decorative. Backgrounds are void black, borders are 1px rigid lines. It feels like an institutional trading terminal built for the future.",
+  "typography": {
+    "heading_font": "Cabinet Grotesk",
+    "body_font": "IBM Plex Sans",
+    "mono_font": "IBM Plex Mono",
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl tracking-tight font-medium text-white",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-medium text-white",
+      "h3": "text-xl sm:text-2xl tracking-tight font-medium text-white",
+      "body": "text-sm sm:text-base leading-relaxed text-neutral-400",
+      "mono_data": "font-mono text-sm tracking-widest uppercase text-neutral-300",
+      "label": "text-xs font-semibold tracking-[0.2em] uppercase text-neutral-500"
+    }
+  },
+  "colors": {
+    "background": "#050505",
+    "surface": "#0F0F0F",
+    "surface_hover": "#1A1A1A",
+    "border": "rgba(255, 255, 255, 0.1)",
+    "primary_accent": "#00D4FF",
+    "secondary_accent": "#FACC15",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A3A3A3",
+    "trading": {
+      "profit": "#10B981",
+      "loss": "#EF4444"
+    }
+  },
+  "layout": {
+    "spacing_scale": "Tailwind standard, but lean into generous padding for marketing sections (py-24, py-32) and dense gaps for dashboard (gap-4).",
+    "dashboard_grid": "Grid cols-1 md:grid-cols-12. Sidebar spans 2. Main content spans 10. Widgets use bento spans (col-span-3, col-span-4, col-span-full).",
+    "container_borders": "All dashboard containers must have 1px solid border (border-white/10) with sharp corners (rounded-none or max rounded-sm). No soft shadows. Use pure flat colors."
+  },
+  "components": {
+    "buttons": "Flat, sharp edges (rounded-none or rounded-sm). Primary: bg-white text-black hover:bg-neutral-200. Accent: bg-[#00D4FF] text-black hover:bg-[#00B4D8].",
+    "cards": "bg-[#0F0F0F] border border-white/10 rounded-sm p-4 or p-6. No drop shadows. Hover states should translate-y [-2px] and increase border opacity to white/30.",
+    "tables": "Dense. Use IBM Plex Mono for numeric columns. Right-align numbers. 1px border-b on rows. Hover bg on rows.",
+    "navigation": "Sticky top bar or left sidebar. Glassmorphism is forbidden in dashboard-use solid #050505 with 1px border-b or border-r. For marketing hero, glass nav (bg-black/60 backdrop-blur-xl) is allowed."
+  },
+  "animations": {
+    "interaction": "Micro-interactions only. 150ms ease-in-out for hover states. No bouncy physics.",
+    "page_load": "Fade in and slight slide-up (translate-y-4 to 0) staggered via Framer Motion."
+  },
+  "media": {
+    "hero_background": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/a5c76faa-e703-4f18-9aaa-d69cb55b7575/images/f6c01deb47795a52ef372abe24aab46051679f6c68b7cf5d49f36904ec0d797d.png",
+      "description": "Abstract 3D glass rendering of interconnected nodes and data streams, glowing cyan and deep blue light"
+    },
+    "dashboard_texture": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/a5c76faa-e703-4f18-9aaa-d69cb55b7575/images/ffa8f2d30a77d09567b67e1e9871ca6955fdf7d59a1896e2d2e74f0880393f4c.png",
+      "description": "Subtle dark mode noise texture with faint glowing blue technical grid lines"
+    },
+    "dao_voting_visual": {
+      "url": "https://static.prod-images.emergentagent.com/jobs/a5c76faa-e703-4f18-9aaa-d69cb55b7575/images/21c9bc239672c61183153625c176a644c03e836a8c7731c986e4c34fd21aa099.png",
+      "description": "Minimalist dark geometric shapes floating, obsidian black and brushed metal"
+    },
+    "abstract_ethereum": {
+      "url": "https://images.unsplash.com/photo-1665597704311-d7304eaf70ac?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwxfHxldGhlcmV1bSUyMGRhcmt8ZW58MHx8fHwxNzc2MTgwNTc3fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Ethereum diagram dark"
+    },
+    "abstract_tech": {
+      "url": "https://images.unsplash.com/photo-1762279389042-9439bfb6c155?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzJ8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMHRlY2glMjBkYXRhJTIwZGFya3xlbnwwfHx8fDE3NzYxODA1Nzd8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract neon lines forming a digital landscape"
+    }
+  },
+  "icons_library": "@phosphor-icons/react",
+  "charts_library": "recharts",
+  "data_testid_rules": "All interactive elements MUST have role-based, kebab-case data-testid attributes (e.g., data-testid='wallet-connect-button').",
+  "instructions_to_main_agent": [
+    "Run `yarn add @phosphor-icons/react recharts`.",
+    "Use Phosphor Icons for all icons.",
+    "Set up root CSS to match the custom dark theme (update --background to 0 0% 2%, --foreground to 0 0% 100%).",
+    "Do NOT use pure #000000; use the specific #050505 background.",
+    "Borders are critical for the 'Swiss' look. Liberally use `border border-white/10` on structural containers.",
+    "Data numbers must use the monospace font class (`font-mono`) for alignment and a 'terminal' feel.",
+    "In the dashboard, do NOT use heavy blur/glassmorphism for main content cards. Use solid dark surfaces (#0F0F0F) so data isn't obscured.",
+    "Implement real-time charts using Recharts with stroke colors matching our trading palette (#10B981 for up, #EF4444 for down).",
+    "Inject subtle background noise texture from `dashboard_texture` using an absolute overlay with `mix-blend-overlay` and low opacity (e.g., 5-10%).",
+    "Ensure the hero section uses the `hero_nodes` image with a black gradient overlay (`bg-gradient-to-r from-black/80 via-black/40 to-transparent`) to ensure text contrast."
+  ]
+}
