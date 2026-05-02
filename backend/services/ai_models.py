@@ -249,6 +249,9 @@ def _format_prediction(raw, model_name):
 
 def get_model_prediction(model_type, indicators):
     """Get prediction from specified model"""
+    torch_pred = _torch_predict(model_type, indicators)
+    if torch_pred:
+        return torch_pred
     if model_type == "LSTM":
         return _lstm.predict(indicators)
     elif model_type == "GRU":
@@ -256,8 +259,8 @@ def get_model_prediction(model_type, indicators):
     elif model_type == "Transformer":
         return _transformer.predict(indicators)
     elif model_type == "Ensemble":
-        lstm_pred = _lstm.predict(indicators)
-        gru_pred = _gru.predict(indicators)
+        lstm_pred = _torch_predict("LSTM", indicators) or _lstm.predict(indicators)
+        gru_pred = _torch_predict("GRU", indicators) or _gru.predict(indicators)
         tf_pred = _transformer.predict(indicators)
         # Weighted ensemble: LSTM 40%, GRU 30%, Transformer 30%
         avg_conf = (lstm_pred["confidence"] * 0.4 + gru_pred["confidence"] * 0.3 + tf_pred["confidence"] * 0.3)
@@ -280,3 +283,33 @@ def compute_model_hash(model_name, model_type):
     """Compute hash for blockchain storage"""
     data = f"{model_name}:{model_type}:{time.time()}"
     return hashlib.sha256(data.encode()).hexdigest()
+
+
+# Optional torch inference (uses trained weights if available)
+try:
+    import torch
+    from pathlib import Path
+    from services.torch_models import build_model, decode_output
+    _TORCH_AVAILABLE = True
+except Exception:
+    _TORCH_AVAILABLE = False
+
+
+def _torch_predict(model_type, indicators):
+    if not _TORCH_AVAILABLE:
+        return None
+    feature_seq = _prepare_features(indicators)
+    x = torch.tensor([feature_seq], dtype=torch.float32)
+    model = build_model(model_type.lower())
+    weights = Path(__file__).resolve().parents[1] / 'data' / 'weights' / f"{model_type.lower()}.pt"
+    if not weights.exists():
+        return None
+    model.load_state_dict(torch.load(weights, map_location='cpu'))
+    model.eval()
+    with torch.no_grad():
+        out = model(x)[0]
+    pred = decode_output(out)
+    pred["model_name"] = model_type
+    pred["raw_score"] = float(out[0].item())
+    pred["timestamp"] = datetime.now(timezone.utc).isoformat()
+    return pred
